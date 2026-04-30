@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Capacity Planning — South</title>
+<!-- Firebase via CDN compatibilité maximale -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyA0oC6W0HdJ3xm-CBQa_0YbYDcA6Y9rX5U",
+    authDomain: "capacity-south-2.firebaseapp.com",
+    databaseURL: "https://capacity-south-2-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "capacity-south-2",
+    storageBucket: "capacity-south-2.firebasestorage.app",
+    messagingSenderId: "998837809265",
+    appId: "1:998837809265:web:c0a4f039f6da6590a9ebd0"
+  };
+  try {
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    window._fbDb = db;
+    window._fbRef = (db, path) => db.ref(path);
+    window._fbSet = (ref, val) => ref.set(val);
+    window._fbOnValue = (ref, cb, err) => ref.on('value', cb, err);
+    window._fbReady = true;
+    window.dispatchEvent(new Event('firebase-ready'));
+  } catch(e) { console.warn('Firebase init failed:', e); }
+</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --av:#3B6D11;--av-bg:#EAF3DE;--av-b:#639922;
+  --pa:#854F0B;--pa-bg:#FAEEDA;--pa-b:#BA7517;
+  --bu:#A32D2D;--bu-bg:#FCEBEB;--bu-b:#E24B4A;
+  --of:#5F5E5A;--of-bg:#F1EFE8;--of-b:#888780;
+  --blue:#185FA5;--blue-bg:#E6F1FB;
+  --bg:#ffffff;--bg2:#f7f6f3;--bg3:#f0efe9;
+  --text:#1a1a18;--text2:#5f5e5a;--text3:#888780;
+  --border:rgba(0,0,0,0.12);--border2:rgba(0,0,0,0.22);
+  --r:8px;--rl:12px;
+}
+@media(prefers-color-scheme:dark){:root{--bg:#1c1c1a;--bg2:#242422;--bg3:#2c2c2a;--text:#f0efe9;--text2:#a8a79f;--text3:#6e6d68;--border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.2)}}
+body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--bg3);color:var(--text);min-height:100vh}
+.topbar{background:var(--bg);border-bottom:0.5px solid var(--border);padding:0.6rem 1rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.topbar-title{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--av);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.sync-badge{font-size:11px;padding:3px 8px;border-radius:20px;border:0.5px solid var(--border);color:var(--text2)}
+.sync-badge.live{border-color:var(--av-b);color:var(--av);background:var(--av-bg)}
+.sync-badge.demo{border-color:var(--pa-b);color:var(--pa);background:var(--pa-bg)}
+.app{max-width:1100px;margin:0 auto;padding:0.75rem 1rem 3rem}
+.demo-notice{background:var(--pa-bg);border:0.5px solid var(--pa-b);border-radius:var(--r);padding:9px 14px;margin-bottom:.75rem;font-size:12px;color:var(--pa);line-height:1.5}
+.mgr-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:.75rem;padding:.5rem .75rem;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--rl)}
+.mgr-label{font-size:11px;color:var(--text2);white-space:nowrap}
+.mgr-chips{display:flex;gap:5px;flex-wrap:wrap;flex:1}
+.chip{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;border:0.5px solid var(--border2);color:var(--text2);background:var(--bg);transition:all .15s;display:flex;align-items:center;gap:4px}
+.chip.active{background:var(--text);color:var(--bg);border-color:var(--text)}
+.chip:hover:not(.active){background:var(--bg2)}
+.chip .ex{font-size:9px;opacity:0.4;cursor:pointer}.chip .ex:hover{opacity:1}
+.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:.75rem}
+.sc{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--r);padding:9px 13px}
+.sc-lbl{font-size:11px;color:var(--text3);margin-bottom:3px}
+.sc-val{font-size:22px;font-weight:600}
+.sc-sub{font-size:10px;color:var(--text2);margin-top:2px}
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:.65rem;flex-wrap:wrap;gap:6px}
+.tl{display:flex;align-items:center;gap:5px}
+.tab-group{display:flex;background:var(--bg2);border-radius:var(--r);padding:2px;gap:2px}
+.tab{padding:4px 12px;border-radius:6px;font-size:12px;cursor:pointer;color:var(--text2);transition:all .15s}
+.tab.active{background:var(--bg);color:var(--text);font-weight:500;box-shadow:0 0.5px 2px rgba(0,0,0,.08)}
+.nav-btn{width:27px;height:27px;border-radius:var(--r);border:0.5px solid var(--border2);background:var(--bg);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px}
+.nav-btn:hover{background:var(--bg2)}
+.plbl{font-size:13px;font-weight:500;min-width:160px;text-align:center}
+.btn-today{font-size:11px;padding:3px 9px;border-radius:var(--r);border:0.5px solid var(--border2);background:var(--bg);color:var(--text2);cursor:pointer}
+.btn-today:hover{background:var(--bg2)}
+.sel{font-size:12px;padding:4px 8px;border-radius:var(--r);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);cursor:pointer}
+.btn-add{font-size:12px;padding:4px 12px;border-radius:var(--r);border:0.5px solid var(--border2);background:var(--text);color:var(--bg);cursor:pointer;font-weight:500}
+.btn-add:hover{opacity:.85}
+.btn-sec{font-size:12px;padding:4px 12px;border-radius:var(--r);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);cursor:pointer}
+.btn-sec:hover{background:var(--bg2)}
+.day-panel{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r);padding:.6rem .85rem;margin-bottom:.65rem}
+.day-panel h3{font-size:11px;font-weight:500;color:var(--text2);margin-bottom:.4rem}
+.day-chips{display:flex;flex-wrap:wrap;gap:4px}
+.dchip{display:flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:11px}
+.gwrap{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--rl);overflow:hidden;overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{padding:5px 7px;font-size:10px;font-weight:500;color:var(--text3);background:var(--bg2);border-bottom:0.5px solid var(--border);border-right:0.5px solid var(--border);white-space:nowrap;text-align:center}
+th:first-child{text-align:left}th:last-child{border-right:none}
+td{border-bottom:0.5px solid var(--border);border-right:0.5px solid var(--border)}
+td:last-child{border-right:none}tr:last-child td{border-bottom:none}
+.name-td{padding:5px 8px;min-width:165px;max-width:205px}
+.name-inner{display:flex;align-items:center;gap:6px}
+.av-t{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:600;flex-shrink:0}
+.nm{font-size:11px;cursor:pointer;border-radius:3px;padding:1px 3px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:115px}
+.nm:hover{background:var(--blue-bg);color:var(--blue)}
+.rl{font-size:9px;color:var(--text3);cursor:pointer;border-radius:3px;padding:1px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:115px}
+.rl:hover{background:var(--bg2)}
+.del-btn{font-size:9px;color:var(--bu);cursor:pointer;padding:1px 4px;border:0.5px solid var(--border);border-radius:var(--r);opacity:0;transition:opacity .15s;margin-left:auto;flex-shrink:0}
+.team-tr:hover .del-btn,.member-tr:hover .del-btn{opacity:1}
+.team-tr td{background:var(--bg2)}
+.team-td{padding:5px 8px}
+.team-inner{display:flex;align-items:center;justify-content:space-between}
+.team-lbl{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:500;flex:1;min-width:0}
+.tbar{width:3px;height:14px;border-radius:2px;display:inline-block;flex-shrink:0}
+.team-nm{cursor:pointer;border-radius:3px;padding:1px 3px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}
+.team-nm:hover{background:var(--blue-bg);color:var(--blue)}
+.team-meta{font-size:9px;color:var(--text3);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:95px}
+.team-actions{display:flex;gap:3px;align-items:center;flex-shrink:0}
+.cbtn{font-size:10px;color:var(--text2);cursor:pointer;padding:2px 5px;border:0.5px solid var(--border);border-radius:var(--r)}
+.cbtn:hover{background:var(--bg)}
+.ac{text-align:center;cursor:pointer;transition:filter .1s;width:32px;min-width:26px;height:27px}
+.ac:hover{filter:brightness(.91)}
+.ac.av{background:var(--av-bg)}.ac.pa{background:var(--pa-bg)}.ac.bu{background:var(--bu-bg)}.ac.of{background:var(--of-bg);cursor:default}
+.ac.today{outline:2px solid var(--blue);outline-offset:-2px}
+.ac span{font-size:9px;font-weight:500}
+.ac.av span{color:var(--av)}.ac.pa span{color:var(--pa)}.ac.bu span{color:var(--bu)}.ac.of span{color:var(--of)}
+.pct-c{text-align:center;cursor:default;width:32px}
+.pct-c span{font-size:9px;font-weight:500}
+.pct-c.av{background:var(--av-bg)}.pct-c.pa{background:var(--pa-bg)}.pct-c.bu{background:var(--bu-bg)}.pct-c.of{background:var(--of-bg)}
+.pct-c.av span{color:var(--av)}.pct-c.pa span{color:var(--pa)}.pct-c.bu span{color:var(--bu)}.pct-c.of span{color:var(--of)}
+.dn{font-size:8px;color:var(--text3);display:block}
+.ie-input{font-size:11px;padding:1px 3px;border:0.5px solid var(--blue);border-radius:3px;background:var(--bg);color:var(--text);outline:none;min-width:60px;max-width:115px}
+.legend{display:flex;align-items:center;gap:12px;margin-top:.6rem;flex-wrap:wrap;padding:0 .25rem}
+.li{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2)}
+.ld{width:10px;height:10px;border-radius:2px}
+.hint{font-size:10px;color:var(--text3);margin-left:auto;font-style:italic}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(2px)}
+.modal{background:var(--bg);border-radius:var(--rl);border:0.5px solid var(--border2);padding:1.1rem 1.3rem;width:360px;max-width:95vw}
+.modal h2{font-size:15px;font-weight:500;margin-bottom:.8rem}
+.fg{margin-bottom:.65rem}
+.fg label{display:block;font-size:12px;color:var(--text2);margin-bottom:3px}
+.fg input,.fg select{width:100%;font-size:13px;padding:6px 9px;border:0.5px solid var(--border2);border-radius:var(--r);background:var(--bg);color:var(--text)}
+.ma{display:flex;gap:7px;justify-content:flex-end;margin-top:.85rem}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-title"><div class="dot"></div>Capacity Planning — South</div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <div class="sync-badge" id="sync-badge">● Connexion...</div>
+    <select class="sel" id="mgr-sel" onchange="setMgr(this.value)"></select>
+  </div>
+</div>
+<div class="app">
+  <div id="demo-notice" style="display:none" class="demo-notice">⚠️ Mode démonstration — Firebase non configuré. Les modifications ne sont pas partagées en temps réel. Voir le guide d'installation pour activer la synchronisation.</div>
+  <div class="mgr-bar">
+    <div class="mgr-label">Manager :</div>
+    <div class="mgr-chips" id="mgr-chips"></div>
+    <button class="btn-sec" style="font-size:11px;padding:3px 8px" onclick="openAddMgrModal()">+ Manager</button>
+    <span class="hint">Double-clic pour renommer</span>
+  </div>
+  <div class="summary" id="summary"></div>
+  <div class="toolbar">
+    <div class="tl">
+      <div class="tab-group">
+        <div class="tab active" onclick="setView('daily')">Journalier</div>
+        <div class="tab" onclick="setView('weekly')">Hebdo</div>
+        <div class="tab" onclick="setView('monthly')">Mensuel</div>
+      </div>
+      <div class="tl" style="gap:4px">
+        <button class="nav-btn" onclick="nav(-1)">&#8249;</button>
+        <div class="plbl" id="plbl"></div>
+        <button class="nav-btn" onclick="nav(1)">&#8250;</button>
+        <button class="btn-today" onclick="goToday()">Aujourd'hui</button>
+      </div>
+    </div>
+    <div class="tl">
+      <select class="sel" id="filter-team" onchange="renderGrid()"></select>
+      <button class="btn-add" onclick="openAddTeamModal()">+ Équipe</button>
+      <button class="btn-sec" onclick="openAddMemberModal()">+ Membre</button>
+    </div>
+  </div>
+  <div id="day-panel"></div>
+  <div class="gwrap"><table id="grid"></table></div>
+  <div class="legend">
+    <div class="li"><div class="ld" style="background:var(--av-bg);border:1px solid var(--av-b)"></div>Disponible</div>
+    <div class="li"><div class="ld" style="background:var(--pa-bg);border:1px solid var(--pa-b)"></div>Partiel</div>
+    <div class="li"><div class="ld" style="background:var(--bu-bg);border:1px solid var(--bu-b)"></div>Occupé</div>
+    <div class="li"><div class="ld" style="background:var(--of-bg);border:1px solid var(--of-b)"></div>Absent/W-E</div>
+    <div class="hint">Clic = changer statut · Double-clic nom = renommer</div>
+  </div>
+</div>
+<div id="mroot"></div>
+<script>
+const TC=['#185FA5','#3B6D11','#993556','#854F0B','#533CB7','#0F6E56','#7a3a0f','#2c7a7b','#5e4a00'];
+const FD=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+const FM=['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const FMS=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+const DEFAULT_STATE={
+  teams:[
+    {id:'t1',name:'CC FR',manager:'Thomas Ernault',color:TC[0],members:[{id:'m101',name:'Caroline Souhbani',role:'CC Consultant'},{id:'m102',name:'Juliane Vilarem',role:'CC Consultant'},{id:'m103',name:'Loic Saint Maximin',role:'CC Consultant'},{id:'m104',name:'Manal Haftari',role:'CC Consultant'},{id:'m105',name:'Mariama Courtier',role:'CC Consultant'},{id:'m106',name:'Olivia Petit',role:'CC Consultant'},{id:'m107',name:'Rime Laamim',role:'CC Consultant'},{id:'m108',name:'Tiffany Medina',role:'CC Consultant'},{id:'m109',name:'Ashmita Sirivigadu',role:'CC Consultant'}]},
+    {id:'t2',name:'Delivery FR',manager:'Brice Lavallée',color:TC[1],members:[{id:'m201',name:'Adel Benzaid',role:'Data Consultant'},{id:'m202',name:'Belinda Folly',role:'Consultant'},{id:'m203',name:'Eric Paindavoine',role:'Hardware Consultant'},{id:'m204',name:'Gaelle Timon',role:'Consultant'},{id:'m205',name:'Lola Le Luyer',role:'Consultant'},{id:'m206',name:'Mylène Villion Forster',role:'Consultant'},{id:'m207',name:'Salma Felah',role:'PM'},{id:'m208',name:'Smain El Hamdaouy',role:'PM'},{id:'m209',name:'Soufiane Kanoute',role:'Data Consultant'},{id:'m210',name:'Vincent Delphin',role:'Data Consultant'},{id:'m211',name:'Pablo Prieto Lopez',role:'Data Consultant'},{id:'m212',name:'Alexandre Carmagniole',role:'Consultant'}]},
+    {id:'t3',name:'CC BE',manager:'Pieter Officer',color:TC[2],members:[{id:'m301',name:'Arno Coppens',role:'CC Consultant'},{id:'m302',name:'Aurélie Dessambre',role:'CC Consultant'},{id:'m303',name:'Caitlin Van der Keilen',role:'CC Consultant'},{id:'m304',name:'Dana Delafontaine',role:'CC Consultant'},{id:'m305',name:'Ellis Coryn',role:'CC Consultant'},{id:'m306',name:'Geoffrey Hauret Clos',role:'CC Consultant'},{id:'m307',name:'Gilles Wilmart',role:'CC Consultant'},{id:'m308',name:'Layla Kassed',role:'CC Consultant'},{id:'m309',name:'Robin Van Keer',role:'CC Consultant'},{id:'m310',name:'Sabine Beke',role:'CC Consultant'},{id:'m311',name:'Sam Van Espen',role:'CC Consultant'},{id:'m312',name:'Tessa Cruypelants',role:'CC Consultant'},{id:'m313',name:'Wannes Van De Woestyne',role:'CC Consultant'}]},
+    {id:'t4',name:'PM BE',manager:'Laurens Bresseleers',color:TC[3],members:[{id:'m401',name:'Charline Puvrez',role:'PM'},{id:'m402',name:'Dominique Van Sweeveldt',role:'PM'},{id:'m403',name:'Joyce Vanonckelen',role:'PM'},{id:'m404',name:'Karen Blocquiaux',role:'PM'},{id:'m405',name:'Madeline Slypen',role:'PM'},{id:'m406',name:'Nils Vermeiren',role:'PM'},{id:'m407',name:'Stef Verrept',role:'PM'},{id:'m408',name:'Stefanie Claeys',role:'PM'}]},
+    {id:'t5',name:'Delivery BE',manager:'Aurore Devleeschouwer',color:TC[4],members:[{id:'m501',name:'Alexis Sternberg',role:'PM'},{id:'m502',name:'Anna Kazilieris',role:'PM'},{id:'m503',name:'Denis Walravens',role:'Consultant'},{id:'m504',name:'Marianne Mancini',role:'Consultant'},{id:'m505',name:'Marine Cappellen',role:'Consultant'},{id:'m506',name:'Renaud Degrez',role:'CC Consultant'},{id:'m507',name:'Vinciance Poismans',role:'Consultant'}]},
+    {id:'t6',name:'Data BE',manager:'Christophe De Dobbeleer',color:TC[5],members:[{id:'m601',name:'Adrien Bovesse',role:'Data Consultant'},{id:'m602',name:'Grégory Copée',role:'Data Consultant'},{id:'m603',name:'Ilias Dujardin',role:'Data Consultant'},{id:'m604',name:'Jonas Natadiredja',role:'Data Consultant'},{id:'m605',name:'Marian Ghesquière',role:'Data Consultant'},{id:'m606',name:'Maxime Merlot',role:'Data Consultant'},{id:'m607',name:'Oguzhan Gungormez',role:'Data Consultant'},{id:'m608',name:'Rob Verheyden',role:'Data Consultant'},{id:'m609',name:'Véronique Diependael',role:'Data Consultant'},{id:'m610',name:'Victor Dormaels',role:'Data Consultant'}]},
+    {id:'t7',name:'Business Manager SME FL',manager:'Sandrine Lambrechts',color:TC[6],members:[{id:'m701',name:'Alain Busch',role:'PM'},{id:'m702',name:'Bram De Wit',role:'Consultant'},{id:'m703',name:'Ciska Van Eyndhoven',role:'Consultant'},{id:'m704',name:'Eline Jacobs',role:'Consultant'},{id:'m705',name:'Emilie Meyvis',role:'Consultant'},{id:'m706',name:'Evelien Desmet',role:'Consultant'},{id:'m707',name:'Joost Schellekens',role:'Consultant'},{id:'m708',name:'Julie De Clercq',role:'Consultant'},{id:'m709',name:'Laura Cleynhens',role:'Consultant'},{id:'m710',name:'Niels Vercammen',role:'Consultant'},{id:'m711',name:'Sayenne Mampaey',role:'Consultant'},{id:'m712',name:'Sien Noterman',role:'PM'},{id:'m713',name:'Valerie Hamal',role:'PM'}]},
+    {id:'t8',name:'Delivery SPAIN',manager:'Xavi Calm',color:TC[7],members:[{id:'m801',name:'Adrian Fernandez',role:'Consultant'},{id:'m802',name:'Alvaro Murillo',role:'Consultant'},{id:'m803',name:'Anna Antoniou',role:'Consultant'},{id:'m804',name:'Gisela Guinovart',role:'PM'},{id:'m805',name:'Gregorio Sepulveda',role:'Consultant'},{id:'m806',name:'Israel Laria',role:'Consultant'},{id:'m807',name:'Laura Cruz',role:'Consultant'},{id:'m808',name:'Merce Cerqueda',role:'Consultant'}]},
+    {id:'t9',name:'CC SPAIN',manager:'David Francos',color:TC[8],members:[{id:'m901',name:'Alex Corral',role:'CC Consultant'},{id:'m902',name:'Alex Luna',role:'CC Consultant'},{id:'m903',name:'Carlos Cadena',role:'CC Consultant'},{id:'m904',name:'Cristina Nunez',role:'CC Consultant'},{id:'m905',name:'Damian Pacheco',role:'CC Consultant'},{id:'m906',name:'Gemma Martinez',role:'CC Consultant'},{id:'m907',name:'Jordi Piferrer',role:'CC Consultant'},{id:'m908',name:'Juanjo Zambrano Barrera',role:'CC Consultant'},{id:'m909',name:'Montse Teres',role:'CC Consultant'},{id:'m910',name:'Sergi Herencia',role:'CC Consultant'}]}
+  ],
+  managers:['Thomas Ernault','Brice Lavallée','Pieter Officer','Laurens Bresseleers','Aurore Devleeschouwer','Christophe De Dobbeleer','Sandrine Lambrechts','Xavi Calm','David Francos'],
+  availability:{}
+};
+let S=JSON.parse(JSON.stringify(DEFAULT_STATE));
+let view='daily',curDate=new Date(),curMgr='Thomas Ernault',collapsed={},useFirebase=false;
+let fbDb,fbRef,fbSet,fbOnValue;
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function fd(d){return d.toISOString().slice(0,10)}
+function isToday(d){return fd(d)===fd(new Date())}
+function isWE(d){const v=d.getDay();return v===0||v===6}
+function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r}
+function ini(n){return n.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
+function weekDays(d){const dw=d.getDay();const mon=addDays(d,-(dw===0?6:dw-1));return Array.from({length:7},(_,i)=>addDays(mon,i))}
+function monthWeeks(d){const y=d.getFullYear(),m=d.getMonth();const days=[];const last=new Date(y,m+1,0).getDate();for(let i=1;i<=last;i++)days.push(new Date(y,m,i));const fd0=days[0].getDay();const off=fd0===0?6:fd0-1;const pad=[...Array(off).fill(null),...days];while(pad.length%7!==0)pad.push(null);const wks=[];for(let i=0;i<pad.length;i+=7)wks.push(pad.slice(i,i+7));return wks;}
+function getAv(mid,ds){return S.availability[mid+'_'+ds]||(isWE(new Date(ds+'T12:00:00'))?'of':'av')}
+function setAv(mid,ds,v){S.availability[mid+'_'+ds]=v;pushFb()}
+function cycleAv(mid,ds){if(isWE(new Date(ds+'T12:00:00')))return;const c={av:'pa',pa:'bu',bu:'of',of:'av'};setAv(mid,ds,c[getAv(mid,ds)]||'av');renderGrid();renderSummary()}
+function slbl(s){return{av:'✓',pa:'½',bu:'✗',of:'–'}[s]||'✓'}
+function pctClass(p,we){if(we)return'of';if(p>=70)return'av';if(p>=40)return'pa';return'bu'}
+function teamPct(team,ds){if(!team.members.length)return null;if(isWE(new Date(ds+'T12:00:00')))return null;let sc=0;team.members.forEach(m=>{const s=getAv(m.id,ds);if(s==='av')sc+=1;else if(s==='pa')sc+=0.5;});return Math.round((sc/team.members.length)*100)}
+function allMembers(){return S.teams.flatMap(t=>t.members.map(m=>({...m,team:t})))}
+function filteredTeams(){const f=document.getElementById('filter-team')?.value||'all';return f==='all'?S.teams:S.teams.filter(t=>t.id===f)}
+function pushFb(){if(!useFirebase||!fbDb)return;try{fbDb.ref('capacity_planning').set(S)}catch(e){}}
+function setSyncStatus(s){const el=document.getElementById('sync-badge');el.className='sync-badge '+s;el.textContent=s==='live'?'● Temps réel':s==='demo'?'● Démo locale':'● Hors ligne'}
+function initFirebase(){if(!window._fbReady)return;fbDb=window._fbDb;try{const r=fbDb.ref('capacity_planning');r.on('value',snap=>{const d=snap.val();if(d){S=d;if(!S.managers)S.managers=S.teams.map(t=>t.manager).filter((v,i,a)=>a.indexOf(v)===i)}else{fbDb.ref('capacity_planning').set(S)}useFirebase=true;setSyncStatus('live');renderAll()},err=>{setSyncStatus('demo');document.getElementById('demo-notice').style.display='block'})}catch(e){setSyncStatus('demo');document.getElementById('demo-notice').style.display='block'}}
+window.addEventListener('firebase-ready',initFirebase);
+setTimeout(()=>{if(!useFirebase){setSyncStatus('demo');document.getElementById('demo-notice').style.display='block';renderAll()}},3000);
+function startInlineEdit(el,cur,onSave){if(el.querySelector('.ie-input'))return;const inp=document.createElement('input');inp.className='ie-input';inp.value=cur;inp.style.width=Math.max(70,cur.length*7+20)+'px';el.innerHTML='';el.appendChild(inp);inp.focus();inp.select();function save(){const v=inp.value.trim();if(v)onSave(v);renderAll()}inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();save()}if(e.key==='Escape')renderAll()});inp.addEventListener('blur',save);inp.addEventListener('click',e=>e.stopPropagation())}
+function editMgrName(old,el){startInlineEdit(el,old,nv=>{const i=S.managers.indexOf(old);if(i>=0)S.managers[i]=nv;S.teams.forEach(t=>{if(t.manager===old)t.manager=nv});if(curMgr===old)curMgr=nv;pushFb()})}
+function editTeamName(tid,el){const t=S.teams.find(x=>x.id===tid);if(t)startInlineEdit(el,t.name,v=>{t.name=v;pushFb()})}
+function editMemberName(mid,el){const t=S.teams.find(t=>t.members.some(m=>m.id===mid));const m=t?.members.find(m=>m.id===mid);if(m)startInlineEdit(el,m.name,v=>{m.name=v;pushFb()})}
+function editMemberRole(mid,el){const t=S.teams.find(t=>t.members.some(m=>m.id===mid));const m=t?.members.find(m=>m.id===mid);if(m)startInlineEdit(el,m.role,v=>{m.role=v;pushFb()})}
+function delTeam(tid){if(!confirm('Supprimer cette équipe ?'))return;S.teams=S.teams.filter(t=>t.id!==tid);pushFb();renderAll()}
+function delMember(mid){if(!confirm('Supprimer ?'))return;S.teams.forEach(t=>t.members=t.members.filter(m=>m.id!==mid));pushFb();renderAll()}
+function delMgr(n){if(!confirm('Supprimer "'+n+'" ?'))return;S.managers=S.managers.filter(m=>m!==n);if(curMgr===n&&S.managers.length)curMgr=S.managers[0];pushFb();renderAll()}
+function setMgr(v){curMgr=v;renderAll()}
+function renderMgrSelect(){document.getElementById('mgr-sel').innerHTML=S.managers.map(m=>'<option value="'+esc(m)+'" '+(m===curMgr?'selected':'')+'>'+esc(m)+'</option>').join('')}
+function renderMgrChips(){document.getElementById('mgr-chips').innerHTML=S.managers.map(m=>'<div class="chip '+(m===curMgr?'active':'')+'" onclick="setMgr(\''+esc(m)+'\')" ondblclick="editMgrName(\''+esc(m)+'\',this)" title="Double-clic pour renommer">'+esc(m)+'<span class="ex" onclick="event.stopPropagation();delMgr(\''+esc(m)+'\')">✕</span></div>').join('')}
+function renderSummary(){const today=fd(new Date());const all=allMembers();let av=0,pa=0,bu=0;all.forEach(m=>{const s=getAv(m.id,today);if(s==='av')av++;else if(s==='pa')pa++;else if(s==='bu')bu++});const wd=weekDays(new Date()).filter(d=>!isWE(d));let ws=0,wt=0;wd.forEach(d=>{all.forEach(m=>{const s=getAv(m.id,fd(d));if(s==='av')ws+=1;else if(s==='pa')ws+=0.5;if(s!=='of')wt++})});const wp=wt>0?Math.round((ws/wt)*100):0;document.getElementById('summary').innerHTML='<div class="sc"><div class="sc-lbl">Disponibles auj.</div><div class="sc-val" style="color:var(--av)">'+av+'</div><div class="sc-sub">sur '+all.length+'</div></div><div class="sc"><div class="sc-lbl">Partiel auj.</div><div class="sc-val" style="color:var(--pa)">'+pa+'</div><div class="sc-sub">membres</div></div><div class="sc"><div class="sc-lbl">Taux semaine</div><div class="sc-val">'+wp+'%</div><div class="sc-sub">toutes équipes</div></div><div class="sc"><div class="sc-lbl">Équipes/Membres</div><div class="sc-val">'+S.teams.length+'</div><div class="sc-sub">'+all.length+' membres</div></div>'}
+function renderFilter(){const sel=document.getElementById('filter-team');const cur=sel.value;sel.innerHTML='<option value="all">Toutes les équipes</option>'+S.teams.map(t=>'<option value="'+t.id+'" '+(cur===t.id?'selected':'')+'>'+esc(t.name)+'</option>').join('')}
+function renderPeriod(){const d=curDate;let lbl='';if(view==='daily')lbl=FD[d.getDay()]+' '+d.getDate()+' '+FM[d.getMonth()]+' '+d.getFullYear();else if(view==='weekly'){const days=weekDays(d);lbl=days[0].getDate()+' '+FMS[days[0].getMonth()]+' – '+days[6].getDate()+' '+FMS[days[6].getMonth()]+' '+days[6].getFullYear()}else lbl=FM[d.getMonth()]+' '+d.getFullYear();document.getElementById('plbl').textContent=lbl}
+function memberRow(mem,team,dates){const ni=ini(mem.name);const ntd='<td class="name-td"><div class="name-inner"><div class="av-t" style="background:'+team.color+'22;color:'+team.color+'">'+ni+'</div><div style="min-width:0"><div class="nm" ondblclick="editMemberName(\''+mem.id+'\',this)" title="Double-clic pour renommer">'+esc(mem.name)+'</div><div class="rl" ondblclick="editMemberRole(\''+mem.id+'\',this)">'+esc(mem.role)+'</div></div><div class="del-btn" onclick="delMember(\''+mem.id+'\')">✕</div></div></td>';const cells=dates.map(d=>{if(!d)return'<td class="ac of"><span>–</span></td>';const ds=fd(d);const s=getAv(mem.id,ds);const we=isWE(d);return'<td class="ac '+s+(isToday(d)?' today':'')+'" onclick="'+(we?'':'cycleAv(\''+mem.id+'\',\''+ds+'\')')+'" title="'+ds+'"><span>'+slbl(s)+'</span></td>'}).join('');return'<tr class="member-tr">'+ntd+cells+'</tr>'}
+function teamHeaderRow(team,dates,showPct){const label='<td class="team-td"><div class="team-inner"><div class="team-lbl"><span class="tbar" style="background:'+team.color+'"></span><span class="team-nm" ondblclick="editTeamName(\''+team.id+'\',this)">'+esc(team.name)+'</span><span class="team-meta">'+esc(team.manager)+'</span></div><div class="team-actions"><span class="del-btn" onclick="delTeam(\''+team.id+'\')">✕</span><span class="cbtn" onclick="toggleC(\''+team.id+'\')">'+(collapsed[team.id]?'▸':'▾')+'</span></div></div></td>';const cells=dates.map(d=>{if(!d||!showPct)return'<td class="pct-c of" style="background:var(--bg2)"></td>';const ds=fd(d);const we=isWE(d);const p=teamPct(team,ds);const cls=p===null?'of':pctClass(p,we);return'<td class="pct-c '+cls+(isToday(d)?' today':'')+'"><span>'+(p===null?'':p+'%')+'</span></td>'}).join('');return'<tr class="team-tr">'+label+cells+'</tr>'}
+function renderDaily(){const ds=fd(curDate);const teams=filteredTeams();let html='<thead><tr><th style="min-width:165px">Membre</th><th style="min-width:80px">'+FD[curDate.getDay()]+' '+curDate.getDate()+' '+FM[curDate.getMonth()]+'</th></tr></thead><tbody>';teams.forEach(t=>{html+=teamHeaderRow(t,[curDate],false);if(!collapsed[t.id])t.members.forEach(m=>{html+=memberRow(m,t,[curDate])})});html+='</tbody>';const av=allMembers().filter(m=>getAv(m.id,ds)==='av');const pa=allMembers().filter(m=>getAv(m.id,ds)==='pa');const panel=document.getElementById('day-panel');if(av.length||pa.length){const chips=arr=>arr.map(m=>'<span class="dchip" style="background:'+m.team.color+'15;border:0.5px solid '+m.team.color+'40;color:'+m.team.color+'">'+esc(m.name)+'</span>').join('');panel.innerHTML='<div class="day-panel"><h3>Disponibles ('+( av.length+pa.length)+')</h3><div class="day-chips">'+chips(av)+chips(pa)+'</div></div>'}else panel.innerHTML='';document.getElementById('grid').innerHTML=html}
+function renderWeekly(){const days=weekDays(curDate);const teams=filteredTeams();const hdrs=days.map(d=>'<th '+(isToday(d)?'style="background:rgba(24,95,165,.06)"':'')+'>'+FD[d.getDay()]+'<br><span style="font-size:10px;font-weight:500">'+d.getDate()+'</span></th>').join('');let html='<thead><tr><th style="min-width:165px">Membre</th>'+hdrs+'</tr></thead><tbody>';teams.forEach(t=>{html+=teamHeaderRow(t,days,true);if(!collapsed[t.id])t.members.forEach(m=>{html+=memberRow(m,t,days)})});html+='</tbody>';document.getElementById('day-panel').innerHTML='';document.getElementById('grid').innerHTML=html}
+function renderMonthly(){const wks=monthWeeks(curDate);const teams=filteredTeams();const dn=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];let html='<thead><tr><th style="min-width:155px">Équipe/Membre</th>'+dn.map(d=>'<th>'+d+'</th>').join('')+'</tr></thead><tbody>';wks.forEach((wk,wi)=>{teams.forEach(team=>{const cells=wk.map(d=>{if(!d)return'<td class="pct-c of"></td>';const ds=fd(d);const we=isWE(d);const p=teamPct(team,ds);const cls=p===null?'of':pctClass(p,we);return'<td class="pct-c '+cls+(isToday(d)?' today':'')+'" style="position:relative"><span class="dn">'+d.getDate()+'</span><span>'+(p===null?'':p+'%')+'</span></td>'}).join('');if(wi===0){html+='<tr class="team-tr"><td class="team-td"><div class="team-inner"><div class="team-lbl"><span class="tbar" style="background:'+team.color+'"></span><span class="team-nm" ondblclick="editTeamName(\''+team.id+'\',this)">'+esc(team.name)+'</span></div><div class="team-actions"><span class="del-btn" onclick="delTeam(\''+team.id+'\')">✕</span><span class="cbtn" onclick="toggleC(\''+team.id+'\')">'+(collapsed[team.id]?'▸':'▾')+'</span></div></div></td>'+cells+'</tr>'}else if(!collapsed[team.id]){html+='<tr class="team-tr"><td class="team-td" style="padding-left:1.1rem"><span style="font-size:9px;color:var(--text3)">'+esc(team.name)+'</span></td>'+cells+'</tr>'}if(!collapsed[team.id]){team.members.forEach(m=>{const mc=wk.map(d=>{if(!d)return'<td class="ac of"><span>–</span></td>';const ds=fd(d);const s=getAv(m.id,ds);const we=isWE(d);return'<td class="ac '+s+(isToday(d)?' today':'')+'" onclick="'+(we?'':'cycleAv(\''+m.id+'\',\''+ds+'\')')+'" style="position:relative"><span class="dn">'+d.getDate()+'</span><span>'+slbl(s)+'</span></td>'}).join('');html+='<tr class="member-tr"><td class="name-td"><div class="name-inner"><div class="av-t" style="background:'+team.color+'22;color:'+team.color+';width:16px;height:16px;font-size:6px">'+ini(m.name)+'</div><div class="nm" style="font-size:10px" ondblclick="editMemberName(\''+m.id+'\',this)">'+esc(m.name)+'</div><div class="del-btn" onclick="delMember(\''+m.id+'\')">✕</div></div></td>'+mc+'</tr>'})}}})});html+='</tbody>';document.getElementById('day-panel').innerHTML='';document.getElementById('grid').innerHTML=html}
+function renderGrid(){renderFilter();if(view==='daily')renderDaily();else if(view==='weekly')renderWeekly();else renderMonthly()}
+function renderAll(){renderMgrSelect();renderMgrChips();renderSummary();renderPeriod();renderGrid()}
+function toggleC(id){collapsed[id]=!collapsed[id];renderGrid()}
+function setView(v){view=v;document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['daily','weekly','monthly'][i]===v));renderAll()}
+function nav(d){if(view==='daily')curDate=addDays(curDate,d);else if(view==='weekly')curDate=addDays(curDate,d*7);else curDate=new Date(curDate.getFullYear(),curDate.getMonth()+d,1);renderAll()}
+function goToday(){curDate=new Date();renderAll()}
+function closeModal(){document.getElementById('mroot').innerHTML=''}
+function onOv(e){if(e.target.classList.contains('ov'))closeModal()}
+function openAddMgrModal(){document.getElementById('mroot').innerHTML='<div class="ov" onclick="onOv(event)"><div class="modal"><h2>Nouveau manager</h2><div class="fg"><label>Nom complet</label><input id="mgr-n" autofocus></div><div class="ma"><button class="btn-sec" onclick="closeModal()">Annuler</button><button class="btn-add" onclick="addMgr()">Ajouter</button></div></div></div>'}
+function addMgr(){const n=document.getElementById('mgr-n').value.trim();if(!n)return;if(!S.managers.includes(n))S.managers.push(n);pushFb();closeModal();renderAll()}
+function openAddTeamModal(){document.getElementById('mroot').innerHTML='<div class="ov" onclick="onOv(event)"><div class="modal"><h2>Nouvelle équipe</h2><div class="fg"><label>Nom</label><input id="tn" autofocus></div><div class="fg"><label>Manager</label><select id="tm">'+S.managers.map(m=>'<option value="'+esc(m)+'" '+(m===curMgr?'selected':'')+'>'+esc(m)+'</option>').join('')+'</select></div><div class="ma"><button class="btn-sec" onclick="closeModal()">Annuler</button><button class="btn-add" onclick="addTeam()">Créer</button></div></div></div>'}
+function addTeam(){const n=document.getElementById('tn').value.trim();const mg=document.getElementById('tm').value;if(!n)return;S.teams.push({id:'t'+Date.now(),name:n,manager:mg,color:TC[S.teams.length%TC.length],members:[]});pushFb();closeModal();renderAll()}
+function openAddMemberModal(){document.getElementById('mroot').innerHTML='<div class="ov" onclick="onOv(event)"><div class="modal"><h2>Ajouter un membre</h2><div class="fg"><label>Équipe</label><select id="mt">'+S.teams.map(t=>'<option value="'+t.id+'">'+esc(t.name)+'</option>').join('')+'</select></div><div class="fg"><label>Nom</label><input id="mn" autofocus></div><div class="fg"><label>Rôle</label><input id="mr"></div><div class="ma"><button class="btn-sec" onclick="closeModal()">Annuler</button><button class="btn-add" onclick="addMember()">Ajouter</button></div></div></div>'}
+function addMember(){const tid=document.getElementById('mt').value;const n=document.getElementById('mn').value.trim();const r=document.getElementById('mr').value.trim();if(!n)return;const t=S.teams.find(x=>x.id===tid);if(!t)return;t.members.push({id:'m'+Date.now(),name:n,role:r||'Membre'});pushFb();closeModal();renderAll()}
+renderAll();
+</script>
+</body>
+</html>
